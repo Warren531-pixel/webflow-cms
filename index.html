@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Webflow CMS" />
+<title>Webflow CMS Editor</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f5;
+    --bg3: #ebebeb;
+    --text: #111111;
+    --text2: #555555;
+    --text3: #999999;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --blue: #146EF5;
+    --blue-bg: #EBF2FF;
+    --blue-text: #0A4DB5;
+    --green: #1a7a3c;
+    --green-bg: #e8f7ed;
+    --amber: #854F0B;
+    --amber-bg: #FEF3DC;
+    --red: #991f1f;
+    --red-bg: #fdeaea;
+    --red-border: #f5aaaa;
+    --radius: 10px;
+    --radius-sm: 7px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e;
+      --bg2: #2c2c2e;
+      --bg3: #3a3a3c;
+      --text: #f2f2f7;
+      --text2: #aeaeb2;
+      --text3: #636366;
+      --border: rgba(255,255,255,0.12);
+      --border2: rgba(255,255,255,0.22);
+      --blue: #4a9eff;
+      --blue-bg: #1a2d4a;
+      --blue-text: #7ec3ff;
+      --green: #4cd980;
+      --green-bg: #1a3328;
+      --amber: #ffcc5e;
+      --amber-bg: #2e2510;
+      --red: #ff6b6b;
+      --red-bg: #2e1515;
+      --red-border: #7a3535;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); }
+  .app { height: 100%; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; position: relative; overflow: hidden; }
+
+  /* SCREENS */
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--bg); transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); pointer-events: none; }
+  .screen.active { transform: translateX(0); pointer-events: all; z-index: 10; }
+  .screen.behind { transform: translateX(-30%); z-index: 1; }
+
+  /* TOPBAR */
+  .topbar { padding: calc(var(--safe-top) + 12px) 16px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 0.5px solid var(--border); background: var(--bg); min-height: 56px; flex-shrink: 0; }
+  .topbar-title { font-size: 17px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .icon-btn { background: none; border: none; cursor: pointer; color: var(--blue); font-size: 15px; font-weight: 500; padding: 6px 4px; display: flex; align-items: center; gap: 4px; flex-shrink: 0; white-space: nowrap; }
+  .icon-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .icon-btn.danger { color: var(--red); }
+  .icon-btn.gray { color: var(--text2); }
+
+  /* SCROLL AREA */
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; }
+  .scroll.no-pad { padding: 0; }
+
+  /* BOTTOM BAR */
+  .bottom-bar { padding: 12px 16px calc(var(--safe-bottom) + 12px); border-top: 0.5px solid var(--border); background: var(--bg); flex-shrink: 0; }
+
+  /* BUTTONS */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:active { opacity: 0.8; transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.45; }
+  .btn-secondary { background: var(--bg2); color: var(--text); margin-top: 10px; }
+  .btn-secondary:active { opacity: 0.7; }
+  .btn-danger { background: var(--red-bg); color: var(--red); margin-top: 10px; border: 0.5px solid var(--red-border); }
+  .btn-danger:active { opacity: 0.7; }
+
+  /* FORM ELEMENTS */
+  .form-group { margin-bottom: 20px; }
+  .form-label { font-size: 13px; color: var(--text2); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .field-type-badge { font-size: 10px; background: var(--bg3); color: var(--text3); padding: 2px 6px; border-radius: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-input { width: 100%; padding: 12px 14px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 16px; font-family: inherit; background: var(--bg); color: var(--text); appearance: none; -webkit-appearance: none; }
+  .form-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(20,110,245,0.15); }
+  textarea.form-input { resize: vertical; min-height: 100px; line-height: 1.5; }
+  select.form-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+  .hint { font-size: 12px; color: var(--text3); margin-top: 6px; line-height: 1.5; }
+
+  /* TOGGLE */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 0.5px solid var(--border); gap: 12px; }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-label { font-size: 15px; color: var(--text); }
+  .toggle-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .switch { position: relative; width: 51px; height: 31px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-track { position: absolute; inset: 0; background: var(--bg3); border-radius: 31px; transition: 0.2s; cursor: pointer; }
+  .switch input:checked + .switch-track { background: #34c759; }
+  .switch-track::before { content: ''; position: absolute; width: 27px; height: 27px; left: 2px; top: 2px; background: white; border-radius: 50%; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+  .switch input:checked + .switch-track::before { transform: translateX(20px); }
+
+  /* LIST ROWS */
+  .list-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 0.5px solid var(--border); cursor: pointer; background: var(--bg); -webkit-tap-highlight-color: rgba(0,0,0,0.05); }
+  .list-row:active { background: var(--bg2); }
+  .list-icon { width: 40px; height: 40px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .list-icon.blue { background: var(--blue-bg); }
+  .list-icon.green { background: var(--green-bg); }
+  .list-icon svg { width: 20px; height: 20px; }
+  .list-icon.blue svg { color: var(--blue); }
+  .list-icon.green svg { color: var(--green); }
+  .list-body { flex: 1; min-width: 0; }
+  .list-title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-sub { font-size: 13px; color: var(--text2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-chevron { color: var(--text3); flex-shrink: 0; }
+  .list-chevron svg { width: 16px; height: 16px; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; flex-shrink: 0; }
+  .badge-published { background: var(--green-bg); color: var(--green); }
+  .badge-draft { background: var(--amber-bg); color: var(--amber); }
+
+  /* CONNECT SCREEN */
+  .connect-hero { display: flex; align-items: center; justify-content: center; padding: 32px 0 24px; }
+  .connect-logo { width: 64px; height: 64px; background: var(--blue); border-radius: 18px; display: flex; align-items: center; justify-content: center; }
+  .connect-logo svg { width: 38px; height: 38px; color: white; }
+  .connect-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .connect-sub { font-size: 15px; color: var(--text2); line-height: 1.6; margin-bottom: 28px; }
+  .info-box { background: var(--bg2); border-radius: var(--radius); padding: 14px; display: flex; gap: 10px; }
+  .info-box svg { width: 18px; height: 18px; color: var(--text3); flex-shrink: 0; margin-top: 1px; }
+  .info-box p { font-size: 13px; color: var(--text2); line-height: 1.5; }
+
+  /* ERROR */
+  .error-box { background: var(--red-bg); border: 0.5px solid var(--red-border); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; color: var(--red); margin-bottom: 16px; line-height: 1.5; display: none; }
+
+  /* EMPTY / LOADING */
+  .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; text-align: center; gap: 12px; }
+  .empty-state svg { width: 40px; height: 40px; color: var(--text3); }
+  .empty-state p { font-size: 15px; color: var(--text2); }
+  .spinner { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* IMAGE FIELD */
+  .img-preview { width: 100%; height: 180px; border-radius: var(--radius-sm); object-fit: cover; border: 1px solid var(--border); margin-bottom: 10px; display: none; background: var(--bg2); }
+  .img-upload-area { border: 1.5px dashed var(--border2); border-radius: var(--radius-sm); padding: 20px; text-align: center; cursor: pointer; color: var(--text2); font-size: 14px; }
+  .img-upload-area svg { width: 28px; height: 28px; color: var(--text3); margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto; }
+  .img-upload-area input[type=file] { display: none; }
+  .img-tabs { display: flex; margin-bottom: 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); overflow: hidden; }
+  .img-tab { flex: 1; padding: 8px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; background: var(--bg2); color: var(--text2); border: none; font-family: inherit; }
+  .img-tab.active { background: var(--blue); color: white; }
+
+  /* SECTION HEADER */
+  .section-header { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; padding: 20px 16px 8px; }
+
+  /* SEARCH */
+  .search-wrap { padding: 10px 16px; }
+  .search-input { width: 100%; padding: 10px 14px 10px 38px; border-radius: var(--radius-sm); border: 1px solid var(--border2); font-size: 15px; font-family: inherit; background: var(--bg2); color: var(--text); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%23999' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: 12px center; }
+  .search-input:focus { outline: none; border-color: var(--blue); background-color: var(--bg); }
+
+  /* COLOR FIELD */
+  .color-row { display: flex; gap: 10px; align-items: center; }
+  .color-swatch { width: 40px; height: 40px; border-radius: var(--radius-sm); border: 1px solid var(--border2); cursor: pointer; flex-shrink: 0; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: calc(var(--safe-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(30,30,30,0.92); color: white; padding: 10px 20px; border-radius: 99px; font-size: 14px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9999; white-space: nowrap; backdrop-filter: blur(8px); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* RICH TEXT NOTE */
+  .rich-note { background: var(--amber-bg); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 12px; color: var(--amber); margin-bottom: 10px; line-height: 1.5; }
+
+  /* SETTINGS */
+  .settings-section { margin-bottom: 8px; }
+  .settings-row { display: flex; align-items: center; padding: 14px 16px; border-bottom: 0.5px solid var(--border); gap: 10px; }
+  .settings-row svg { width: 18px; height: 18px; color: var(--text3); flex-shrink: 0; }
+  .settings-key { font-size: 15px; flex: 1; }
+  .settings-val { font-size: 13px; color: var(--text3); font-family: 'Courier New', monospace; }
+
+  /* UPLOAD PROGRESS */
+  .upload-progress { height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 10px; overflow: hidden; display: none; }
+  .upload-progress-bar { height: 100%; background: var(--blue); border-radius: 2px; transition: width 0.3s; width: 0%; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── SCREEN: Connect ── -->
+  <div class="screen active" id="s-connect">
+    <div class="scroll">
+      <div class="connect-hero">
+        <div class="connect-logo">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3L3 9v12h6V9h6v12h6V9l-6-6H9z"/></svg>
+        </div>
+      </div>
+      <div class="connect-title">Webflow CMS</div>
+      <div class="connect-sub">Edit your CMS collections from your phone — text, images, rich text, options, toggles and more.</div>
+
+      <div class="form-group">
+        <label class="form-label">Webflow API token</label>
+        <input class="form-input" type="password" id="inp-token" placeholder="Paste your API token here" autocomplete="off" autocorrect="off" spellcheck="false" />
+        <p class="hint">Go to Webflow → Account Settings → Integrations → API Access. Create a token with <strong>cms:read, cms:write, sites:read, assets:write</strong> scopes.</p>
+      </div>
+
+      <div class="error-box" id="err-connect"></div>
+      <button class="btn btn-primary" id="btn-connect" onclick="connect()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+        Connect to Webflow
+      </button>
+
+      <div class="info-box" style="margin-top:20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <p>Your token is stored only in your browser's local storage on this device and is only used to communicate directly with Webflow's API.</p>
+      </div>
+
+      <div class="info-box" style="margin-top:12px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p><strong>To add to iPhone home screen:</strong> open in Safari → tap the Share button → "Add to Home Screen". The app will work offline-ready and feel native.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN: Sites ── -->
+  <div class="screen" id="s-sites">
+    <div class="topbar">
+      <div class="topbar-title">My Sites</div>
+      <button class="icon-btn gray" onclick="goSettings()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M19.07 19.07l-1.41-1.41M4.93 4.93l1.41 1.41M4.93 19.07l1.41-1.41M21 12h-2M5 12H3M12 21v-2M12 5V3"/></svg>
+      </button>
+    </div>
+    <div class="scroll no-pad" id="list-sites">
+      <div class="empty-state"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><p>Loading sites…</p></div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN: Collections ── -->
+  <div class="screen" id="s-collections">
+    <div class="topbar">
+      <button class="icon-btn" onclick="back('s-sites')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        Sites
+      </button>
+      <div class="topbar-title" id="title-collections"></div>
+    </div>
+    <div class="scroll no-pad" id="list-collections">
+      <div class="empty-state"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><p>Loading collections…</p></div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN: Items ── -->
+  <div class="screen" id="s-items">
+    <div class="topbar">
+      <button class="icon-btn" onclick="back('s-collections')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      <div class="topbar-title" id="title-items"></div>
+      <button class="icon-btn" onclick="newItem()" title="New item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+    <div class="search-wrap">
+      <input class="search-input" type="search" id="search-items" placeholder="Search items…" oninput="filterItems()" />
+    </div>
+    <div class="scroll no-pad" id="list-items"></div>
+  </div>
+
+  <!-- ── SCREEN: Edit Item ── -->
+  <div class="screen" id="s-edit">
+    <div class="topbar">
+      <button class="icon-btn" onclick="back('s-items')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      <div class="topbar-title" id="title-edit">Edit Item</div>
+    </div>
+    <div class="scroll" id="edit-fields"></div>
+    <div class="bottom-bar">
+      <div class="error-box" id="err-save"></div>
+      <button class="btn btn-primary" id="btn-save" onclick="saveItem()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save changes
+      </button>
+      <button class="btn btn-danger" onclick="archiveItem()">Archive item</button>
+    </div>
+  </div>
+
+  <!-- ── SCREEN: Settings ── -->
+  <div class="screen" id="s-settings">
+    <div class="topbar">
+      <button class="icon-btn" onclick="back('s-sites')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      <div class="topbar-title">Settings</div>
+    </div>
+    <div class="scroll no-pad">
+      <div class="section-header">Account</div>
+      <div class="settings-section">
+        <div class="settings-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span class="settings-key">API Token</span>
+          <span class="settings-val" id="set-token-preview"></span>
+        </div>
+        <div class="settings-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span class="settings-key">Sites</span>
+          <span class="settings-val" id="set-sites-count"></span>
+        </div>
+      </div>
+      <div class="section-header">About</div>
+      <div class="settings-section">
+        <div class="settings-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span class="settings-key">Image uploads</span>
+          <span class="settings-val">URL or file</span>
+        </div>
+      </div>
+      <div style="padding:16px;">
+        <button class="btn btn-danger" onclick="disconnect()">Disconnect &amp; clear token</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const S = {
+  token: '',
+  sites: [],
+  curSite: null,
+  curCollection: null,
+  collectionFields: [],
+  allItems: [],
+  curItem: null,
+  screenStack: ['s-connect'],
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('wf_token');
+  if (saved) { S.token = saved; loadSites(); goto('s-sites'); }
+});
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function goto(id) {
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.classList.remove('behind'); });
+  const prev = S.screenStack[S.screenStack.length - 1];
+  if (prev && prev !== id) document.getElementById(prev)?.classList.add('behind');
+  document.getElementById(id).classList.add('active');
+  S.screenStack.push(id);
+}
+function back(id) {
+  S.screenStack.pop();
+  document.querySelectorAll('.screen').forEach(s => { s.classList.remove('active'); s.classList.remove('behind'); });
+  document.getElementById(id).classList.add('active');
+}
+function goSettings() {
+  document.getElementById('set-token-preview').textContent = S.token ? S.token.slice(0,4)+'••••'+S.token.slice(-4) : '—';
+  document.getElementById('set-sites-count').textContent = S.sites.length;
+  goto('s-settings');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg, dur=2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ─── API HELPER ───────────────────────────────────────────────────────────────
+async function wf(path, method='GET', body) {
+  const opts = { method, headers: { Authorization: 'Bearer '+S.token, 'accept-version': '1.0.0' } };
+  if (body) { opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
+  const r = await fetch('https://api.webflow.com'+path, opts);
+  if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.message||e.msg||'HTTP '+r.status); }
+  return r.json();
+}
+
+// ─── CONNECT ─────────────────────────────────────────────────────────────────
+async function connect() {
+  const token = document.getElementById('inp-token').value.trim();
+  if (!token) { showErr('err-connect','Please enter your API token.'); return; }
+  S.token = token;
+  hideErr('err-connect');
+  const btn = document.getElementById('btn-connect');
+  btn.disabled = true; btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Connecting…';
+  try {
+    await loadSites();
+    localStorage.setItem('wf_token', token);
+    goto('s-sites');
+  } catch(e) {
+    showErr('err-connect', 'Could not connect: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg> Connect to Webflow';
+  }
+}
+
+function disconnect() {
+  if (!confirm('Disconnect and clear your saved token?')) return;
+  localStorage.removeItem('wf_token');
+  S.token=''; S.sites=[]; S.curSite=null;
+  document.getElementById('inp-token').value='';
+  back('s-connect');
+  S.screenStack = ['s-connect'];
+}
+
+// ─── SITES ────────────────────────────────────────────────────────────────────
+async function loadSites() {
+  const data = await wf('/v2/sites');
+  S.sites = data.sites || [];
+  renderSites();
+}
+
+function renderSites() {
+  const el = document.getElementById('list-sites');
+  if (!S.sites.length) { el.innerHTML = emptyHTML('No sites found on this account.'); return; }
+  el.innerHTML = S.sites.map(s => `
+    <div class="list-row" onclick="selectSite('${s.id}','${esc(s.displayName)}','${esc(s.shortName||'')}')">
+      <div class="list-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+      <div class="list-body"><div class="list-title">${esc(s.displayName)}</div><div class="list-sub">${esc(s.shortName||s.id)}.webflow.io</div></div>
+      <div class="list-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>`).join('');
+}
+
+async function selectSite(id, name, slug) {
+  S.curSite = {id, name, slug};
+  document.getElementById('title-collections').textContent = name;
+  goto('s-collections');
+  document.getElementById('list-collections').innerHTML = loadingHTML();
+  try {
+    const data = await wf('/v2/sites/'+id+'/collections');
+    const cols = data.collections || [];
+    const el = document.getElementById('list-collections');
+    if (!cols.length) { el.innerHTML = emptyHTML('No CMS collections found.'); return; }
+    el.innerHTML = cols.map(c => `
+      <div class="list-row" onclick="selectCollection('${c.id}','${esc(c.displayName)}')">
+        <div class="list-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+        <div class="list-body"><div class="list-title">${esc(c.displayName)}</div><div class="list-sub">${c.totalCount||0} items</div></div>
+        <div class="list-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></div>
+      </div>`).join('');
+  } catch(e) { document.getElementById('list-collections').innerHTML = emptyHTML('Error: '+e.message); }
+}
+
+// ─── ITEMS ────────────────────────────────────────────────────────────────────
+async function selectCollection(id, name) {
+  S.curCollection = {id, name};
+  document.getElementById('title-items').textContent = name;
+  document.getElementById('search-items').value = '';
+  goto('s-items');
+  document.getElementById('list-items').innerHTML = loadingHTML();
+  try {
+    // Fetch collection details (fields) + items in parallel
+    const [colData, itemData] = await Promise.all([
+      wf('/v2/collections/'+id),
+      wf('/v2/collections/'+id+'/items?limit=100')
+    ]);
+    S.collectionFields = colData.fields || [];
+    S.allItems = itemData.items || [];
+    renderItems(S.allItems);
+  } catch(e) { document.getElementById('list-items').innerHTML = emptyHTML('Error: '+e.message); }
+}
+
+function renderItems(items) {
+  const el = document.getElementById('list-items');
+  if (!items.length) { el.innerHTML = emptyHTML('No items yet. Tap + to add one.'); return; }
+  el.innerHTML = items.map(item => {
+    const fd = item.fieldData||{};
+    const name = fd.name||fd.title||fd['item-name']||item.id;
+    const draft = item.isDraft;
+    const date = item.lastUpdated ? new Date(item.lastUpdated).toLocaleDateString() : '';
+    return `<div class="list-row" onclick="editItem('${item.id}')">
+      <div class="list-body">
+        <div class="list-title">${esc(String(name))}</div>
+        ${date ? `<div class="list-sub">Updated ${date}</div>` : ''}
+      </div>
+      <span class="badge ${draft?'badge-draft':'badge-published'}">${draft?'Draft':'Live'}</span>
+      <div class="list-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></div>
+    </div>`;
+  }).join('');
+}
+
+function filterItems() {
+  const q = document.getElementById('search-items').value.toLowerCase();
+  if (!q) { renderItems(S.allItems); return; }
+  renderItems(S.allItems.filter(i => {
+    const fd = i.fieldData||{};
+    return Object.values(fd).some(v => String(v).toLowerCase().includes(q));
+  }));
+}
+
+// ─── EDIT ITEM ────────────────────────────────────────────────────────────────
+function editItem(id) {
+  S.curItem = S.allItems.find(i=>i.id===id);
+  if (!S.curItem) return;
+  const fd = S.curItem.fieldData||{};
+  const name = fd.name||fd.title||'Edit item';
+  document.getElementById('title-edit').textContent = name;
+  hideErr('err-save');
+
+  const container = document.getElementById('edit-fields');
+  let html = '';
+
+  // Published toggle
+  html += `<div style="padding:0 0 0 0;">
+    <div class="toggle-row">
+      <div><div class="toggle-label">Published</div><div class="toggle-sub">Visible on your live site</div></div>
+      <label class="switch"><input type="checkbox" id="tog-published" ${!S.curItem.isDraft?'checked':''}><span class="switch-track"></span></label>
+    </div>
+  </div>`;
+
+  // Fields from collection schema
+  const fieldOrder = S.collectionFields.map(f=>f.slug);
+  const allKeys = [...new Set([...fieldOrder, ...Object.keys(fd)])].filter(k=>k!=='_id'&&k!=='slug'&&k!=='archived'&&k!=='draft');
+
+  allKeys.forEach(key => {
+    const schema = S.collectionFields.find(f=>f.slug===key);
+    const type = schema?.type || guessType(key, fd[key]);
+    const label = schema?.displayName || humanize(key);
+    const val = fd[key];
+    html += buildField(key, label, type, val, schema);
+  });
+
+  container.innerHTML = html;
+  goto('s-edit');
+}
+
+function guessType(key, val) {
+  if (typeof val === 'boolean') return 'Bool';
+  if (typeof val === 'number') return 'Number';
+  if (val && typeof val === 'object' && val.url) return 'ImageRef';
+  if (Array.isArray(val) && val[0]?.url) return 'ImageRefSet';
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) return 'DateTime';
+  if (key.includes('color') || key.includes('colour')) return 'Color';
+  if (key.includes('email')) return 'Email';
+  if (key.includes('phone')) return 'Phone';
+  if (key.includes('url') || key.includes('link') || key.includes('video')) return 'Link';
+  if (typeof val === 'string' && val.length > 120) return 'RichText';
+  return 'PlainText';
+}
+
+function buildField(key, label, type, val, schema) {
+  const id = 'fld_'+key;
+  let input = '';
+
+  if (type === 'Bool') {
+    input = `<label class="switch"><input type="checkbox" data-field="${key}" data-type="Bool" ${val?'checked':''}><span class="switch-track"></span></label>`;
+    return `<div class="toggle-row"><div class="toggle-label">${esc(label)}</div>${input}</div>`;
+  }
+
+  if (type === 'RichText') {
+    input = `<div class="rich-note">⚠ Rich text — paste HTML or plain text. Formatting will be preserved if valid HTML.</div>
+      <textarea class="form-input" data-field="${key}" data-type="RichText" rows="6">${esc(String(val??''))}</textarea>`;
+  } else if (type === 'Number') {
+    input = `<input class="form-input" type="number" data-field="${key}" data-type="Number" value="${esc(String(val??''))}" inputmode="decimal" />`;
+  } else if (type === 'Email') {
+    input = `<input class="form-input" type="email" data-field="${key}" data-type="Email" value="${esc(String(val??''))}" inputmode="email" autocapitalize="off" />`;
+  } else if (type === 'Phone') {
+    input = `<input class="form-input" type="tel" data-field="${key}" data-type="Phone" value="${esc(String(val??''))}" inputmode="tel" />`;
+  } else if (type === 'Link' || type === 'VideoLink') {
+    input = `<input class="form-input" type="url" data-field="${key}" data-type="${type}" value="${esc(String(val??''))}" inputmode="url" autocapitalize="off" placeholder="https://" />`;
+  } else if (type === 'DateTime') {
+    const isoVal = val ? val.slice(0,16) : '';
+    input = `<input class="form-input" type="datetime-local" data-field="${key}" data-type="DateTime" value="${esc(isoVal)}" />`;
+  } else if (type === 'Color') {
+    input = `<div class="color-row">
+      <input type="color" class="color-swatch" data-field="${key}" data-type="Color" value="${(val&&val.startsWith('#'))?val:'#000000'}" onchange="document.getElementById('color-txt-${key}').value=this.value" />
+      <input class="form-input" type="text" id="color-txt-${key}" value="${esc(String(val??''))}" placeholder="#000000 or rgb(…)" oninput="updateColorPicker('${key}',this.value)" />
+    </div>`;
+  } else if (type === 'Option') {
+    const opts = schema?.metadata?.options || [];
+    input = `<select class="form-input" data-field="${key}" data-type="Option">
+      <option value="">— None —</option>
+      ${opts.map(o=>`<option value="${esc(o.id)}" ${val===o.id?'selected':''}>${esc(o.name)}</option>`).join('')}
+    </select>`;
+  } else if (type === 'ItemRef') {
+    input = `<input class="form-input" type="text" data-field="${key}" data-type="ItemRef" value="${esc(String(val??''))}" placeholder="Item ID" autocapitalize="off" />`;
+  } else if (type === 'ImageRef') {
+    const imgUrl = val?.url || '';
+    input = buildImageField(key, 'ImageRef', imgUrl, val?.alt||'', false);
+  } else if (type === 'ImageRefSet') {
+    const imgs = Array.isArray(val) ? val : [];
+    input = buildMultiImageField(key, imgs);
+  } else if (type === 'File') {
+    input = `<input class="form-input" type="url" data-field="${key}" data-type="File" value="${esc(String(val?.url||val||''))}" placeholder="File URL" autocapitalize="off" />`;
+  } else {
+    const isLong = typeof val==='string' && val.length>100;
+    if (isLong) {
+      input = `<textarea class="form-input" data-field="${key}" data-type="PlainText" rows="4">${esc(String(val??''))}</textarea>`;
+    } else {
+      input = `<input class="form-input" type="text" data-field="${key}" data-type="PlainText" value="${esc(String(val??''))}" autocorrect="off" autocapitalize="sentences" />`;
+    }
+  }
+
+  const typeBadge = type !== 'PlainText' ? `<span class="field-type-badge">${type.toLowerCase()}</span>` : '';
+  return `<div class="form-group"><label class="form-label">${esc(label)} ${typeBadge}</label>${input}</div>`;
+}
+
+function buildImageField(key, type, currentUrl, currentAlt, multi) {
+  const imgId = 'img_prev_'+key;
+  return `
+    <div class="img-tabs">
+      <button class="img-tab active" onclick="switchImgTab('${key}','upload')" id="tab-upload-${key}">Upload from phone</button>
+      <button class="img-tab" onclick="switchImgTab('${key}','url')" id="tab-url-${key}">Paste URL</button>
+    </div>
+    <div id="imgpanel-upload-${key}">
+      ${currentUrl ? `<img src="${esc(currentUrl)}" class="img-preview" id="${imgId}" style="display:block;" />` : `<img class="img-preview" id="${imgId}" />`}
+      <div class="img-upload-area" onclick="document.getElementById('file-${key}').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Tap to choose a photo or image
+        <input type="file" id="file-${key}" accept="image/*" onchange="handleImageFile('${key}','${type}',this)" data-field="${key}" data-type="${type}" />
+      </div>
+      <div class="upload-progress" id="prog-${key}"><div class="upload-progress-bar" id="progbar-${key}"></div></div>
+    </div>
+    <div id="imgpanel-url-${key}" style="display:none;">
+      <input class="form-input" type="url" id="imgurl-${key}" data-field="${key}" data-type="${type}" value="${esc(currentUrl)}" placeholder="https://your-image-url.com/photo.jpg" inputmode="url" autocapitalize="off" />
+      <p class="hint" style="margin-top:6px;">Paste any public image URL. Webflow will import it automatically.</p>
+    </div>
+    <div class="form-group" style="margin-top:10px;margin-bottom:0;">
+      <label class="form-label">Alt text</label>
+      <input class="form-input" type="text" id="imgalt-${key}" value="${esc(currentAlt)}" placeholder="Describe the image…" autocapitalize="sentences" />
+    </div>`;
+}
+
+function buildMultiImageField(key, imgs) {
+  let html = `<div id="multi-img-list-${key}">`;
+  imgs.forEach((img,i) => {
+    html += `<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;" id="mimg-${key}-${i}">
+      <img src="${esc(img.url)}" style="width:60px;height:60px;border-radius:6px;object-fit:cover;border:1px solid var(--border);" />
+      <div style="flex:1;min-width:0;">
+        <input class="form-input" type="text" value="${esc(img.alt||'')}" placeholder="Alt text" style="margin-bottom:6px;" data-multi-alt="${key}" data-idx="${i}" />
+        <input class="form-input" type="url" value="${esc(img.url)}" data-multi-url="${key}" data-idx="${i}" style="font-size:12px;" />
+      </div>
+      <button onclick="removeMultiImg('${key}',${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:4px;">✕</button>
+    </div>`;
+  });
+  html += `</div>
+    <button class="btn btn-secondary" onclick="addMultiImg('${key}')" style="margin-top:4px;font-size:14px;">+ Add image</button>`;
+  return html;
+}
+
+function switchImgTab(key, tab) {
+  ['upload','url'].forEach(t => {
+    document.getElementById('imgpanel-'+t+'-'+key).style.display = t===tab?'block':'none';
+    document.getElementById('tab-'+t+'-'+key).classList.toggle('active', t===tab);
+  });
+}
+
+function updateColorPicker(key, val) {
+  const sw = document.querySelector(`[data-field="${key}"][data-type="Color"]`);
+  if (sw && /^#[0-9a-f]{3,6}$/i.test(val)) sw.value = val;
+}
+
+function addMultiImg(key) {
+  const url = prompt('Image URL:');
+  if (!url) return;
+  const alt = prompt('Alt text (optional):') || '';
+  const list = document.getElementById('multi-img-list-'+key);
+  const i = list.children.length;
+  const div = document.createElement('div');
+  div.id = 'mimg-'+key+'-'+i;
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;';
+  div.innerHTML = `<img src="${esc(url)}" style="width:60px;height:60px;border-radius:6px;object-fit:cover;border:1px solid var(--border);" />
+    <div style="flex:1;min-width:0;">
+      <input class="form-input" type="text" value="${esc(alt)}" placeholder="Alt text" style="margin-bottom:6px;" data-multi-alt="${key}" data-idx="${i}" />
+      <input class="form-input" type="url" value="${esc(url)}" data-multi-url="${key}" data-idx="${i}" style="font-size:12px;" />
+    </div>
+    <button onclick="removeMultiImg('${key}',${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:4px;">✕</button>`;
+  list.appendChild(div);
+}
+
+function removeMultiImg(key, i) {
+  const el = document.getElementById('mimg-'+key+'-'+i);
+  if (el) el.remove();
+}
+
+// ─── IMAGE UPLOAD ─────────────────────────────────────────────────────────────
+async function handleImageFile(key, type, input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 4*1024*1024) { toast('⚠ Max image size is 4MB'); return; }
+
+  const prog = document.getElementById('prog-'+key);
+  const bar = document.getElementById('progbar-'+key);
+  prog.style.display = 'block'; bar.style.width = '10%';
+
+  try {
+    // Step 1: get S3 upload URL from Webflow
+    bar.style.width = '30%';
+    const meta = await wf('/v2/sites/'+S.curSite.id+'/assets', 'POST', {
+      fileName: file.name,
+      fileHash: await hashFile(file),
+    });
+
+    bar.style.width = '50%';
+
+    // Step 2: upload to S3
+    const form = new FormData();
+    Object.entries(meta.uploadDetails||{}).forEach(([k,v]) => form.append(k,v));
+    form.append('file', file);
+
+    const s3r = await fetch(meta.uploadUrl, { method:'POST', body: form });
+    if (!s3r.ok && s3r.status !== 204) throw new Error('S3 upload failed: '+s3r.status);
+
+    bar.style.width = '90%';
+
+    // Preview
+    const previewUrl = meta.asset?.url || meta.hostedUrl || URL.createObjectURL(file);
+    const prev = document.getElementById('img_prev_'+key);
+    if (prev) { prev.src = previewUrl; prev.style.display='block'; }
+
+    // Store the fileId for save
+    input.dataset.uploadedFileId = meta.asset?.id || meta.fileId || '';
+    input.dataset.uploadedUrl = meta.asset?.url || meta.hostedUrl || '';
+
+    bar.style.width = '100%';
+    toast('✓ Image uploaded');
+    setTimeout(()=>{ prog.style.display='none'; }, 800);
+  } catch(e) {
+    prog.style.display='none';
+    // Fallback: use object URL for preview, user must host externally
+    const previewUrl = URL.createObjectURL(file);
+    const prev = document.getElementById('img_prev_'+key);
+    if (prev) { prev.src = previewUrl; prev.style.display='block'; }
+    toast('Upload failed — CORS restriction. Use "Paste URL" tab or host this app on a server.');
+  }
+}
+
+async function hashFile(file) {
+  const buf = await file.arrayBuffer();
+  const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ─── SAVE ITEM ────────────────────────────────────────────────────────────────
+async function saveItem() {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Saving…';
+  hideErr('err-save');
+
+  const fd = Object.assign({}, S.curItem.fieldData||{});
+  const isDraft = !document.getElementById('tog-published').checked;
+
+  // Gather regular fields
+  document.querySelectorAll('#edit-fields [data-field]').forEach(el => {
+    const k = el.dataset.field;
+    const t = el.dataset.type;
+    if (!k || !t) return;
+    if (el.tagName === 'INPUT' && el.type === 'file') {
+      // handled separately
+    } else if (t === 'Bool') {
+      fd[k] = el.checked;
+    } else if (t === 'Number') {
+      fd[k] = el.value !== '' ? parseFloat(el.value) : null;
+    } else if (t === 'DateTime') {
+      fd[k] = el.value ? new Date(el.value).toISOString() : null;
+    } else if (t === 'ImageRef') {
+      // handled below
+    } else if (t === 'ImageRefSet') {
+      // handled below
+    } else {
+      fd[k] = el.value;
+    }
+  });
+
+  // Image fields
+  document.querySelectorAll('#edit-fields input[type=file][data-field]').forEach(el => {
+    const k = el.dataset.field;
+    const t = el.dataset.type;
+    const altEl = document.getElementById('imgalt-'+k);
+    const alt = altEl ? altEl.value : '';
+    if (el.dataset.uploadedUrl) {
+      fd[k] = { fileId: el.dataset.uploadedFileId||undefined, url: el.dataset.uploadedUrl, alt };
+    } else {
+      // check URL tab
+      const urlEl = document.getElementById('imgurl-'+k);
+      if (urlEl && urlEl.value) fd[k] = { url: urlEl.value, alt };
+    }
+  });
+
+  // Multi-image fields
+  document.querySelectorAll('[data-multi-url]').forEach(el => {
+    // just collect all at save
+  });
+  // Rebuild multi-image arrays per key
+  const multiKeys = new Set();
+  document.querySelectorAll('[data-multi-url]').forEach(el => multiKeys.add(el.dataset.multiUrl));
+  multiKeys.forEach(k => {
+    const urls = document.querySelectorAll(`[data-multi-url="${k}"]`);
+    const alts = document.querySelectorAll(`[data-multi-alt="${k}"]`);
+    const imgs = [];
+    urls.forEach((urlEl,i) => {
+      if (urlEl.value) imgs.push({ url: urlEl.value, alt: alts[i]?.value||'' });
+    });
+    fd[k] = imgs;
+  });
+
+  // Color field: sync from text input
+  document.querySelectorAll('[data-type="Color"][data-field]').forEach(el => {
+    const k = el.dataset.field;
+    const txt = document.getElementById('color-txt-'+k);
+    if (txt) fd[k] = txt.value || el.value;
+  });
+
+  try {
+    const updated = await wf('/v2/collections/'+S.curCollection.id+'/items/'+S.curItem.id, 'PATCH', { fieldData: fd, isDraft });
+    // Update local cache
+    const idx = S.allItems.findIndex(i=>i.id===S.curItem.id);
+    if (idx>=0) { S.allItems[idx].fieldData = fd; S.allItems[idx].isDraft = isDraft; }
+    toast('✓ Saved successfully');
+    btn.innerHTML = '✓ Saved';
+    setTimeout(()=>{
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save changes';
+      btn.disabled = false;
+    }, 1500);
+  } catch(e) {
+    showErr('err-save', 'Save failed: '+e.message);
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save changes';
+    btn.disabled = false;
+  }
+}
+
+// ─── NEW / ARCHIVE ITEM ───────────────────────────────────────────────────────
+async function newItem() {
+  const name = prompt('Item name:');
+  if (!name) return;
+  try {
+    const created = await wf('/v2/collections/'+S.curCollection.id+'/items', 'POST', { fieldData:{name}, isDraft:true });
+    S.allItems.unshift(created);
+    renderItems(S.allItems);
+    toast('✓ Item created (draft)');
+  } catch(e) { toast('Error: '+e.message); }
+}
+
+async function archiveItem() {
+  const name = (S.curItem?.fieldData?.name)||'this item';
+  if (!confirm('Archive "'+name+'"? It will be hidden from your live site.')) return;
+  try {
+    await wf('/v2/collections/'+S.curCollection.id+'/items/'+S.curItem.id, 'PATCH', { isArchived:true });
+    S.allItems = S.allItems.filter(i=>i.id!==S.curItem.id);
+    renderItems(S.allItems);
+    back('s-items');
+    toast('Item archived');
+  } catch(e) { toast('Error: '+e.message); }
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function showErr(id, msg) { const e=document.getElementById(id); if(e){e.textContent=msg;e.style.display='block';} }
+function hideErr(id) { const e=document.getElementById(id); if(e) e.style.display='none'; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function humanize(k) { return k.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+function loadingHTML() { return '<div class="empty-state"><svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg><p>Loading…</p></div>'; }
+function emptyHTML(msg) { return `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>${esc(msg)}</p></div>`; }
+</script>
+</body>
+</html>
