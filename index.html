@@ -392,7 +392,8 @@ function toast(msg, dur=2500) {
 async function wf(path, method='GET', body) {
   const opts = { method, headers: { Authorization: 'Bearer '+S.token, 'accept-version': '1.0.0' } };
   if (body) { opts.headers['Content-Type']='application/json'; opts.body=JSON.stringify(body); }
-  const proxyBase = localStorage.getItem('wf_proxy') || 'https://api.webflow.com';
+  const proxyInput = document.getElementById('inp-proxy');
+    const proxyBase = (proxyInput && proxyInput.value.trim()) || localStorage.getItem('wf_proxy') || 'https://api.webflow.com';
     const r = await fetch(proxyBase+path, opts);
   if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.message||e.msg||'HTTP '+r.status); }
   return r.json();
