@@ -217,6 +217,8 @@
         <input class="form-input" type="url" id="inp-proxy" placeholder="https://your-worker.workers.dev/proxy" autocomplete="off" autocorrect="off" spellcheck="false" />
         <p class="hint">Your Cloudflare Worker URL — fixes the "Load failed" error. Free to deploy in ~2 min. See the included setup guide.</p>
       </div>
+      <button type="button" onclick="testProxy()" style="width:100%;padding:10px;margin-top:8px;background:none;border:1px solid var(--border2);border-radius:7px;font-size:14px;cursor:pointer;color:var(--text2);font-family:inherit;">Test proxy connection</button>
+      <div id="test-result" style="font-size:13px;margin-top:8px;padding:10px;border-radius:7px;display:none;"></div>
       <div class="error-box" id="err-connect"></div>
       <button class="btn btn-primary" id="btn-connect" onclick="connect()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
@@ -340,6 +342,32 @@
 </div>
 
 <script>
+
+async function testProxy() {
+  const proxy = document.getElementById('inp-proxy').value.trim();
+  const res = document.getElementById('test-result');
+  res.style.display = 'block';
+  if (!proxy) { res.style.background='#fdeaea'; res.style.color='#991f1f'; res.textContent = 'Enter a proxy URL first.'; return; }
+  res.style.background = 'var(--bg2)'; res.style.color = 'var(--text2)';
+  res.textContent = 'Testing ' + proxy + ' ...';
+  try {
+    const r = await fetch(proxy + '/v2/sites', {
+      headers: { Authorization: 'Bearer test', 'accept-version': '1.0.0' }
+    });
+    const txt = await r.text();
+    if (r.status === 403 || r.status === 401 || txt.includes('not_authorized') || txt.includes('unauthorized')) {
+      res.style.background = '#e8f7ed'; res.style.color = '#1a7a3c';
+      res.textContent = '✓ Proxy is working! Now enter your real API token and connect.';
+    } else {
+      res.style.background = '#e8f7ed'; res.style.color = '#1a7a3c';
+      res.textContent = '✓ Proxy responded (status ' + r.status + '). Response: ' + txt.slice(0,120);
+    }
+  } catch(e) {
+    res.style.background = '#fdeaea'; res.style.color = '#991f1f';
+    res.textContent = '✗ Failed: ' + e.message + ' — URL was: ' + proxy + '/v2/sites';
+  }
+}
+
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const S = {
   token: '',
